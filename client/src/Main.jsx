@@ -1,29 +1,28 @@
-import React from "react";
-
+import React, { lazy, Suspense } from "react";
+const App1 = lazy(() => import("app1/App"));
+const App2 = lazy(() => import("app2/App"));
+class AppBoundary extends React.Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) return <p role="alert">Не удалось загрузить приложение: {this.state.error.message}. Проверьте сервер приложения и обновите страницу.</p>;
+    return this.props.children;
+  }
+}
+function apiUrl(name, port) {
+  const config = window.APPS_CONFIG || {};
+  if (config[name + "ApiUrl"]) return config[name + "ApiUrl"];
+  const url = new URL(config[name + "Url"] || window.location.origin);
+  url.port = port; url.pathname = "/api/inputs"; url.search = ""; url.hash = "";
+  return url.href;
+}
 export default function Main() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <div
-        style={{ border: "1px solid blue", padding: "10px", margin: "10px" }}
-      >
-        <h2>app c 3000 порта</h2>
-        <iframe
-          src="http://172.16.1.69:3000"
-          style={{ width: "100%", height: "400px", border: "none" }}
-          title="3000"
-        />
-      </div>
-
-      <div
-        style={{ border: "1px solid green", padding: "10px", margin: "10px" }}
-      >
-        <h2>app c 3002 порта</h2>
-        <iframe
-          src="http://172.16.1.69:3002"
-          style={{ width: "100%", height: "400px", border: "none" }}
-          title="App 3002"
-        />
-      </div>
-    </div>
-  );
+  return <main style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20 }}>
+    {[{ name: "app1", Component: App1, port: 4005 }, { name: "app2", Component: App2, port: 4006 }].map(({ name, Component, port }) =>
+      <section key={name} style={{ border: "1px solid #ddd", padding: 10 }}>
+        <h2>{name}</h2>
+        <AppBoundary><Suspense fallback={<p>Загрузка {name}…</p>}><Component apiUrl={apiUrl(name, port)} /></Suspense></AppBoundary>
+      </section>
+    )}
+  </main>;
 }
